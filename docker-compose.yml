@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # --- DATABASE (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine
+    container_name: rukun-jaya-db
+    restart: always
+    environment:
+      POSTGRES_DB: rukun_jaya_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password_rahasia
+    ports:
+      - "5432:5432"
+    volumes:  
+      - pgdata:/var/lib/postgresql/data
+
+  # --- BACKEND (Express.js + Prisma) ---
+  backend:
+    image: node:18-alpine
+    container_name: rukun-jaya-backend
+    working_dir: /app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../be-rukun-jaya:/app
+      - /app/node_modules # Mencegah bentrok dengan node_modules lokal
+    depends_on:
+      - db
+    # Perintah untuk install dependencies dan menjalankan dev server (misal pakai nodemon)
+    command: sh -c "npm install && npm run dev"
+
+  # --- FRONTEND (Next.js) ---
+  frontend:
+    image: node:18-alpine
+    container_name: rukun-jaya-frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../fe-rukun-jaya:/app
+      - /app/node_modules # Mencegah bentrok dengan node_modules lokal
+      - /app/.next        # Menjaga cache build Next.js
+    depends_on:
+      - backend
+    command: sh -c "npm install && npm run dev"
+    tty: true
+
+# Deklarasi Volume untuk Penyimpanan Data Database Permanen
+volumes:
+  pgdata:
