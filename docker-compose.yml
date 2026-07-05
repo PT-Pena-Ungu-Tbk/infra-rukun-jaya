@@ -1,8 +1,7 @@
-version: '3.8'
 
 services:
   # --- DATABASE (PostgreSQL) ---
-  db:
+  rukun-jaya-db:
     image: postgres:15-alpine
     container_name: rukun-jaya-db
     restart: always
@@ -16,7 +15,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
    # --- BACKEND (Express.js + Prisma) ---
-  backend:
+  rukun-jaya-backend:
     build: 
       context: ../be-rukun-jaya  # Merujuk ke folder backend
       dockerfile: Dockerfile     # Menggunakan Dockerfile yang baru kita buat
@@ -24,29 +23,30 @@ services:
     ports:
       - "5000:5000"
     environment:
-      # URL Database menunjuk ke service 'db' (PostgreSQL container)
-      - DATABASE_URL=postgresql://postgres:password_rahasia@db:5432/rukun_jaya_db?schema=public
+      # URL Database menunjuk ke service 'rukun-jaya-db' (PostgreSQL container)
+      - DATABASE_URL=postgresql://postgres:password_rahasia@rukun-jaya-db:5432/rukun_jaya_db?schema=public
       - JWT_SECRET=rahasia_super_aman # Ganti dengan secret Anda
       - PORT=5000
     depends_on:
-      - db
+      - rukun-jaya-db
 
 
   # --- FRONTEND (Next.js) ---
-  frontend:
-    image: node:18-alpine
+  rukun-jaya-frontend:
+    build:
+      context: ../fe-rukun-jaya
+      dockerfile: dockerfile
     container_name: rukun-jaya-frontend
-    working_dir: /app
     ports:
       - "3000:3000"
-    volumes:
-      - ../fe-rukun-jaya:/app
-      - /app/node_modules # Mencegah bentrok dengan node_modules lokal
-      - /app/.next        # Menjaga cache build Next.js
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - ../fe-rukun-jaya/.env
+    restart: unless-stopped
     depends_on:
-      - backend
-    command: sh -c "npm install && npm run dev"
-    tty: true
+      - rukun-jaya-backend
 
 # Deklarasi Volume untuk Penyimpanan Data Database Permanen
 volumes:
